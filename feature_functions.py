@@ -3,6 +3,7 @@ from collections import OrderedDict
 from typing import Union, List
 import numpy as np
 import pandas as pd
+from sklearn.ensemble import ExtraTreesClassifier
 
 
 def cal_mag(x: Union[pd.Series, np.ndarray], y: Union[pd.Series, np.ndarray], z: Union[pd.Series, np.ndarray]) -> np.ndarray:
@@ -99,5 +100,12 @@ def calculated_features_df(df: pd.DataFrame, raw_data_cols: List[str], label_col
     features_df_final = pd.DataFrame(features_dict_list)
     return features_df_final
 
+
+def feature_importance_estimate(features: pd.DataFrame, y_true: pd.Series) -> pd.DataFrame:
+    model = ExtraTreesClassifier(n_estimators=60, max_depth=5, n_jobs=-1, random_state=90210, verbose=1)
+    model.fit(features.values, y_true.values.ravel())
+    feature_importance_df = pd.DataFrame({'Feature': list(features), 'Importance': model.feature_importances_})
+    feature_importance_df.sort_values(by='Importance', ascending=False, inplace=True)
+    return feature_importance_df
 
 

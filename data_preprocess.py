@@ -1,7 +1,5 @@
 import pickle
 import pandas as pd
-# import seaborn as sns
-# sns.set(color_codes=True)
 from typing import List, Tuple
 from feature_functions import add_session_epochs, calculated_features_df
 
