@@ -1,14 +1,13 @@
 import pandas as pd
 import numpy as np
-import seaborn as sns
+# import seaborn as sns
+# sns.set(color_codes=True)
 import matplotlib.pyplot as plt
 from typing import List, Tuple
 from collections import OrderedDict
 import os
-sns.set(color_codes=True)
 
 
-# fixme: add sorting to avoid potential unsorted ts mistakes? could impact epochs
 def read_sensor_data_by_subject(base_path: str, cur_activity: str, cur_sub: str) -> Tuple[pd.DataFrame, List[str], str]:
     """
     :param base_path: data base path
@@ -80,9 +79,10 @@ def read_all_subjects_activity_data_to_df(base_path: str) -> Tuple[pd.DataFrame,
         print("")
     print("Done")
     print("Joining all users and sensors data... ")
-    all_subject_sensor_data_df = pd.concat(all_subject_sensor_data_list, sort=False, ignore_index=True)
+    all_subject_sensor_data = pd.concat(all_subject_sensor_data_list, sort=False, ignore_index=True)
+    all_subject_sensor_data.sort_values(by=['session_uid', 'ts'], inplace=True)
     print("Done")
-    return all_subject_sensor_data_df, features_cols, label_col
+    return all_subject_sensor_data, features_cols, label_col
 
 
 def add_session_epochs(df: pd.DataFrame, session_uid: pd.Series, sampling_rate_hz: int = 50, seconds_per_epoch: int = 10):
