@@ -2,12 +2,11 @@ import pandas as pd
 import numpy as np
 # import seaborn as sns
 # sns.set(color_codes=True)
-import matplotlib.pyplot as plt
 from typing import List, Tuple
-from collections import OrderedDict
-import os
 import gc
 import itertools
+
+from feature_functions import cal_mag
 
 
 def read_sensor_data_by_subject(base_path: str, cur_activity: str, cur_sub: str) -> Tuple[pd.DataFrame, List[str], str]:
@@ -33,12 +32,12 @@ def read_sensor_data_by_subject(base_path: str, cur_activity: str, cur_sub: str)
     # read acc
     sub_acc_df = pd.read_csv(sensor_data_paths[1])
     del sub_acc_df[sub_acc_df.columns[0]]
-    sub_acc_df.rename(columns={'x': 'x_acc', 'y': 'y_acc', 'z': 'z_acc'}, inplace=True)
+    sub_acc_df.rename(columns={'x': 'acc_x', 'y': 'acc_y', 'z': 'acc_z'}, inplace=True)
 
     # read gyro
     sub_gyro_df = pd.read_csv(sensor_data_paths[2])
     del sub_gyro_df[sub_gyro_df.columns[0]]
-    sub_gyro_df.rename(columns={'x': 'x_gyro', 'y': 'y_gyro', 'z': 'z_gyro'}, inplace=True)
+    sub_gyro_df.rename(columns={'x': 'gyro_x', 'y': 'gyro_y', 'z': 'gyro_z'}, inplace=True)
 
     # Joining all subject's sensor data
     '''
@@ -87,51 +86,64 @@ def read_all_subjects_activity_data_to_df(base_path: str) -> Tuple[pd.DataFrame,
     return all_subject_sensor_data, features_cols, label_col
 
 
-def add_session_epochs(df: pd.DataFrame, session_uid_col: str, sampling_rate_hz: int = 50, seconds_per_epoch: int = 10):
+def add_session_epochs(df: pd.DataFrame, session_uid_col: str, sampling_rate_hz: int = 50, seconds_per_epoch: int = 10) -> pd.DataFrame:
     """
     :param df: input dataframe
-    :param session_uid: session unique identifier to help locate samples belonging to the same
+    :param session_uid_col: session unique identifier to help locate samples belonging to the same
     :param sampling_rate_hz: sensors sampling rate. It is provided as 50Hz in the dataset description
     :param seconds_per_epoch: How many seconds to include per epoch
     :return: This function divides sessions into epochs. We do that since the number of users X activities is rather low.
     By subdividing the session, we may increase the number of observations per each action.
-    This will make it easier to 
+    This will make it easier to divide to train and test.
+    NOTE: this function modifies the original df (but this is a quick&dirty exercise, and the original df won't be used downstream in any case)
     """
-    # assert len(df) == len(session_uid), f"Dataframe and session must have the same length, but it isn't ({len(df)}, {len(session_uid)}). Cowardly aborting."
-    # assert len(df.index.symmetric_difference(session_uid.index)) == 0, f"Dataframe and session must have identical indices. Cowardly aborting."
     df['epoch'] = None
     session_uids_list = list(set(df[session_uid_col].values))
-    # flatten = lambda l: [item for sublist in l for item in sublist]  # lamda expression to flatten list of lists
+
+    # Dividing each user's session to "sub-sessions" called epochs. Each epoch is seconds_per_epoch in length
+    # Since the dataset might not be divided to exactly in seconds_per_epoch, the leftover is appended to the last epoch
+    # which can be slightly larger than the result due to that
+    for s_uid in session_uids_list:
+        n = np.sum(df[session_uid_col] == s_uid)
+        seconds_total = n / sampling_rate_hz
+        n_epochs = int(seconds_total // seconds_per_epoch)
+        obs_per_epoch = seconds_per_epoch * sampling_rate_hz
+
+        epochs_vec_lists = [[i] * obs_per_epoch for i in range(0, n_epochs)]
+        total = len(epochs_vec_lists) * obs_per_epoch
+        if total < n:
+            epochs_vec_lists.append(([n_epochs - 1] * (n - total)))
+
+        epochs_vec = list(itertools.chain(*epochs_vec_lists))
+        df.loc[df[session_uid_col] == s_uid, 'epoch'] = np.array(epochs_vec)
+
+    assert df['epoch'].isna().sum() == 0, "Error. At this point no epoch should be unassigned, yet, some epochs are None"
+    # Adding a unique identifier for a session's epoch
+    df['session_uid_epoch'] = df['session_uid'] + '_epoch_' + df['epoch'].astype(str)
+    return df
 
 
+def add_features(df: pd.DataFrame):
+    """
+    :param df:
+    :return:
+    adds features to the dataframe.
+    Unique session/epoch identifier is hardcoded 'session_uid_epoch' (aka SUE)
+    Some features will be added per SUE. While not ideal for some features,
+    this will prevent leakage of information between epochs.
+    Features generally divide to two classes:
+    * transformations: features that are a combination of values per specific column. For example, Acc-magnitude: sqrt(x^2 + y^2 + z^2). All values exist in the same row
+    * aggregations: features that may include data for observations in other rows. For example, dx/dt is such as feature, since it requires information from previous row
 
-    # for s_uid in session_uids_list:
-    s_uid = 'sub_16_dws_1'
-    n = (df[session_uid_col] == s_uid).sum()
-    seconds_total = n / sampling_rate_hz
-    n_epochs = int(seconds_total // seconds_per_epoch)
-    obs_per_epoch = seconds_per_epoch * sampling_rate_hz
+    Generally, for efficiency's sake, transformation will be applied on the entire dataframe. Aggregations will be either per SUE, or per session_uid, depending on the case
+    """
+    su_col = 'session_uid'
+    sue_col = 'session_uid_epoch'
 
-    epochs_vec_lists = [[i] * obs_per_epoch for i in range(0, n_epochs)]
-    if len(epochs_vec_lists) < n:
-        # epochs_vec_lists += ([n_epochs - 1] * (n - len(epochs_vec_lists)))
-        epochs_vec_lists[-1].extend(([n_epochs - 1] * (n - len(epochs_vec_lists))))
-        # epochs_vec += [n_epochs - 1] * (n - len(epochs_vec))
-        # epochs_vec.extend([n_epochs - 1] * (n - len(epochs_vec)))
-        # epochs_vec += [n_epochs - 1] * (n - len(epochs_vec))
-        # epochs_vec[-1].extend([n_epochs - 1] * (n - len(epochs_vec)))
-        # epochs_vec.append(np.ndarray([n_epochs - 1] * (n - len(epochs_vec))).ravel())
-        # np.append(epochs_vec, np.ndarray([n_epochs - 1] * (n - len(epochs_vec))).ravel())
+    df['acc_mag'] = cal_mag(df['acc_x'], df['acc_y'], df['acc_z'])
+    df['gyro_mag'] = cal_mag(df['gyro_x'], df['gyro_y'], df['gyro_z'])
 
-
-    # flatten(epochs_vec_lists)
-
-    epochs_vec = list(itertools.chain(*epochs_vec_lists))
-    df.loc[df[session_uid_col] == s_uid, 'epoch'] = np.array(epochs_vec)
-    len(epochs_vec)
-    # np.array(epochs_vec).ravel()
-
-
+    print()
 
 
 if __name__ == '__main__':
@@ -153,7 +165,9 @@ if __name__ == '__main__':
 
     # reading and processing all subjects activities from all three sensors to a single df
     all_subject_sensor_data_df, features_cols, label_col = read_all_subjects_activity_data_to_df(path_data_basepath)
-    add_session_epochs(all_subject_sensor_data_df, 'session_uid')
+    all_subject_sensor_data_df = add_session_epochs(all_subject_sensor_data_df, 'session_uid')
+    print("")
+    add_features(all_subject_sensor_data_df)
     # all_subject_sensor_data_df.to_csv('data/tmp.csv', index=False)
 
 
