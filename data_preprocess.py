@@ -1,12 +1,9 @@
 import pickle
 import pandas as pd
-import numpy as np
 # import seaborn as sns
 # sns.set(color_codes=True)
 from typing import List, Tuple
-import itertools
-from collections import OrderedDict
-from feature_functions import cal_mag
+from feature_functions import add_session_epochs, calculated_features_df
 
 
 def read_sensor_data_by_subject(base_path: str, cur_activity: str, cur_sub: str) -> Tuple[pd.DataFrame, List[str], str]:
@@ -86,107 +83,16 @@ def read_all_subjects_activity_data_to_df(base_path: str) -> Tuple[pd.DataFrame,
     return all_subject_sensor_data, raw_data_cols, label_col
 
 
-def add_session_epochs(df: pd.DataFrame, session_uid_col: str, sampling_rate_hz: int = 50, seconds_per_epoch: int = 10) -> pd.DataFrame:
-    """
-    :param df: input dataframe
-    :param session_uid_col: session unique identifier to help locate samples belonging to the same
-    :param sampling_rate_hz: sensors sampling rate. It is provided as 50Hz in the dataset description
-    :param seconds_per_epoch: How many seconds to include per epoch
-    :return: This function divides sessions into epochs. We do that since the number of users X activities is rather low.
-    By subdividing the session, we may increase the number of observations per each action.
-    This will make it easier to divide to train and test.
-    NOTE: this function modifies the original df (but this is a quick&dirty exercise, and the original df won't be used downstream in any case)
-    """
-    df['epoch'] = None
-    session_uids_list = list(set(df[session_uid_col].values))
-
-    # Dividing each user's session to "sub-sessions" called epochs. Each epoch is seconds_per_epoch in length
-    # Since the dataset might not be divided to exactly in seconds_per_epoch, the leftover is appended to the last epoch
-    # which can be slightly larger than the result due to that
-    for s_uid in session_uids_list:
-        n = np.sum(df[session_uid_col] == s_uid)
-        seconds_total = n / sampling_rate_hz
-        n_epochs = int(seconds_total // seconds_per_epoch)
-        obs_per_epoch = seconds_per_epoch * sampling_rate_hz
-
-        epochs_vec_lists = [[i] * obs_per_epoch for i in range(0, n_epochs)]
-        total = len(epochs_vec_lists) * obs_per_epoch
-        if total < n:
-            epochs_vec_lists.append(([n_epochs - 1] * (n - total)))
-
-        epochs_vec = list(itertools.chain(*epochs_vec_lists))
-        df.loc[df[session_uid_col] == s_uid, 'epoch'] = np.array(epochs_vec)
-
-    assert df['epoch'].isna().sum() == 0, "Error. At this point no epoch should be unassigned, yet, some epochs are None"
-    # Adding a unique identifier for a session's epoch
-    df['session_uid_epoch'] = df['session_uid'] + '_epoch_' + df['epoch'].astype(str)
-    return df
-
-
-def calculated_features_df(df: pd.DataFrame, raw_data_cols: List[str], label_col: str) -> pd.DataFrame:
-    """
-    adds features to the df.
-    Unique session/epoch identifier is hardcoded 'session_uid_epoch' (aka SUE)
-    Some features will be added per SUE. While not ideal for some features,
-    this will prevent leakage of information between epochs.
-    Features generally divide to two classes:
-    * transformations: features that are a combination of values per specific column. For example, Acc-magnitude: sqrt(x^2 + y^2 + z^2). All values exist in the same row
-    * aggregations: features that may include data for observations in other rows. For example, dx/dt is such as feature, since it requires information from previous row
-    Generally, for efficiency's sake, transformation will be applied on the entire dataframe. Aggregations will be either per SUE, or per session_uid, depending on the case
-
-    :return: a new dataframe, that contains ONE row per SUE. This is a row of features, rather than the incoming RAW data
-    """
-    sue_col = 'session_uid_epoch'
-
-    df['acc_mag'] = cal_mag(df['acc_x'], df['acc_y'], df['acc_z'])
-    df['gyro_mag'] = cal_mag(df['gyro_x'], df['gyro_y'], df['gyro_z'])
-
-    # extra_data_df = df[['subject', 'activity', 'session_uid', label_col]].drop_duplicates()
-    # subject activity   session_uid    ts epoch     session_uid_epoch label
-    all_raw_data_cols = raw_data_cols + ['acc_mag', 'gyro_mag']
-
-    sue_list = list(df[sue_col].unique())
-    features_dict_list = []
-    for i, sue in enumerate(sue_list):
-        print(f"Creating features for: {sue} ({i}/{len(sue_list)})")
-        features_dict = OrderedDict()
-        for raw_data_col in all_raw_data_cols:
-            print(f"\r\tStandard features for: {raw_data_col}                            ", end="")
-            cur_series = df.loc[df[sue_col] == sue, raw_data_col]
-            features_dict['std_' + raw_data_col] = np.std(cur_series.values)
-            features_dict['avg_' + raw_data_col] = np.average(cur_series.values)
-
-        features_dict['sue'] = sue
-        features_dict[label_col] = df.loc[df[sue_col] == sue, label_col].values[0]
-        features_dict_list.append(features_dict)
-        print("\nDone")
-
-    features_df_final = pd.DataFrame(features_dict_list)
-    return features_df_final
-
-
 if __name__ == '__main__':
     path_data_basepath = r'data/'
-    # sensors_paths_dict = OrderedDict({
-    #     'A_DeviceMotion_data': 'motion',
-    #     'B_Accelerometer_data': 'acc',
-    #     'C_Gyroscope_data': 'gyro'
-    # })
-    # activity_type_translation = {
-    #     'dws': 'downstairs',
-    #     'ups': 'upstairs',
-    #     'sit': 'sitting',
-    #     'std': 'standing',
-    #     'wlk': 'walking',
-    #     'jog': 'jogging'
-    # }
-
-    LOAD_FROM_PICKLE = True
+    LOAD_FROM_PICKLE = False
     # reading and processing all subjects activities from all three sensors to a single df
     path_subjects_sensor_data = path_data_basepath + 'subjects_sensor_data.p'
     path_subjects_sensor_raw_cols = path_data_basepath + 'subjects_raw_cols.p'
     path_subjects_label_col = path_data_basepath + 'label_col.p'
     path_features_df = path_data_basepath + 'features_df.p'
+
+    print("Loading all subjects and all sensors data")
     if not LOAD_FROM_PICKLE:
         all_subject_sensor_data_df, raw_data_cols, label_col = read_all_subjects_activity_data_to_df(path_data_basepath)
         all_subject_sensor_data_df = add_session_epochs(all_subject_sensor_data_df, 'session_uid')
@@ -197,11 +103,16 @@ if __name__ == '__main__':
         all_subject_sensor_data_df = pickle.load(open(path_subjects_sensor_data, "rb"))
         raw_data_cols = pickle.load(open(path_subjects_sensor_raw_cols, "rb"))
         label_col = pickle.load(open(path_subjects_label_col, "rb"))
+    print("Done\n")
 
     # Generating some (very basic and generic features) over all raw data, in each epoch
     metadata_cols = [col for col in list(all_subject_sensor_data_df) if col not in raw_data_cols and col != label_col]
+    print("Calculating features (this may take some time. Go grab a coffee. Read the news. Take a stroll outside!")
     if not LOAD_FROM_PICKLE:
         features_df = calculated_features_df(all_subject_sensor_data_df, raw_data_cols, label_col)
         pickle.dump(features_df, open(path_features_df, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
     else:
         features_df = pickle.load(open(path_features_df, "rb"))
+    print("Done\n")
+
+
