@@ -8,14 +8,17 @@ from sklearn.model_selection import ShuffleSplit, GridSearchCV
 from typing import List
 import numpy as np
 import seaborn as sns
-
 from feature_functions import feature_importance_estimate
 from model_and_reports import cm_and_classification_report
-
 sns.set(color_codes=True)
 
 
 def get_model_and_tuned_params(model_name: str):
+    """
+    :param model_name: model name as string
+    :return: this function is a short basic wrapper to enable this script to support multiple
+    classifiers with only minor changes. The function returns a model object and it's tune_parameters dictionary.
+    """
     if model_name.lower() == 'LogisticRegression'.lower():
         tuned_parameters = [{'C': [0.01, 0.1, 1, 10]}]
         model = LogisticRegression(random_state=90210, solver='liblinear', multi_class='auto', penalty='l1')
@@ -182,14 +185,13 @@ if __name__ == '__main__':
     While both train and hold-out are characterized in high-recall/high-precision, it is both
     interesting and encouraging to note that the *MIS-CLASSIFICATIONS MAKE SENSE*.
     The model may confuse 'upstairs' and 'downstairs'. These are indeed very similar actions.
-    Also, 'standing' and 'sitting' are sometimes confused, both being static activities.
+    Also, 'walking' can be confused with either of the other dynamic activities (jogging, upstairs, downstairs), 
+    which again, makes sense.
     
     Though I can offer no support for this at this time, I *suspect* that some of the confusion MAY be,
     in part, due to inconsistent orientation of the phone worn by some subjects. 
     In such a case, upstairs and downstairs may indeed look similar, if the phone was, for example, transposed.
-    Some of the features can be affected by this (especially separate-raw-axes data from accelerometer and gyroscope).  
-  
-    NOTE ABOUT THE SENSORS: 
+    Some of the features can be affected by this (especially separate-raw-axes data from accelerometer and gyroscope).   
     '''
 
     # Best GS model
@@ -209,4 +211,114 @@ if __name__ == '__main__':
     cm_and_classification_report(y_holdout, y_holdout_pred, labels=activity_labels_list)
     print("")
 
+    '''
+    -------------------------------------------------------------------------------------------
+    Appendix
+    -------------------------------------------------------------------------------------------
+    (A) Feature Importance
+    -------------------------------------------------------------------------------------------
+                   Feature  Importance
+        avg_attitude.pitch    0.062134
+             avg_gravity.y    0.052514
+                avg_gyro_y    0.050069
+        std_rotationRate.x    0.048946
+                std_gyro_x    0.047880
+              avg_gyro_mag    0.046901
+               std_acc_mag    0.046551
+                std_gyro_y    0.046098
+                 avg_acc_y    0.042942
+        std_rotationRate.y    0.039323
+             std_gravity.z    0.037886
+        avg_rotationRate.y    0.037693
+               avg_acc_mag    0.036843
+    std_userAcceleration.x    0.036676
+              std_gyro_mag    0.035617
+             avg_gravity.z    0.033940
+                 std_acc_y    0.030779
+          std_attitude.yaw    0.029296
+                 avg_acc_z    0.027541
+    std_userAcceleration.z    0.026505
+    std_userAcceleration.y    0.024867
+                 std_acc_x    0.021008
+             std_gravity.x    0.020824
+        std_rotationRate.z    0.020576
+        std_attitude.pitch    0.012475
+                 std_acc_z    0.012253
+             std_gravity.y    0.009526
+                std_gyro_z    0.008841
+    avg_userAcceleration.z    0.007490
+                 avg_acc_x    0.006585
+             avg_gravity.x    0.006415
+        avg_rotationRate.z    0.005942
+          avg_attitude.yaw    0.005618
+         avg_attitude.roll    0.003584
+    avg_userAcceleration.y    0.003378
+         std_attitude.roll    0.003195
+                avg_gyro_z    0.003151
+    avg_userAcceleration.x    0.003134
+                    gender    0.001986
+                    height    0.001434
+        avg_rotationRate.x    0.000527
+                    weight    0.000405
+                       age    0.000348
+                avg_gyro_x    0.000306
 
+    While I didn't end-up using it, it would be easy to include only top "most important" features, using this table
+    -------------------------------------------------------------------------------------------
+
+    -------------------------------------------------------------------------------------------
+    (B) Results (model predictions)
+    -------------------------------------------------------------------------------------------
+    This part includes some train/hold-out classification report and results.
+    ========================================================
+     Train Classification Report
+    ========================================================
+         t/p    ups   dws   wlk   std   sit   jog 
+          ups   199     0    14     0     0     0 
+          dws     0   176     4     0     0     0 
+          wlk     0     1   508     0     0     0 
+          std     0     0     0   451     4     0 
+          sit     0     0     0     0   508     0 
+          jog     0     0     2     0     0   184 
+
+                  precision    recall  f1-score   support
+
+             dws      0.994     0.978     0.986       180
+             jog      1.000     0.989     0.995       186
+             sit      0.992     1.000     0.996       508
+             std      1.000     0.991     0.996       455
+             ups      1.000     0.934     0.966       213
+             wlk      0.962     0.998     0.980       509
+
+        accuracy                          0.988      2051
+       macro avg      0.991     0.982     0.986      2051
+    weighted avg      0.988     0.988     0.988      2051
+
+
+
+    ========================================================
+     Hold-out Classification Report
+    ========================================================
+         t/p    ups   dws   wlk   std   sit   jog 
+          ups    51     8     4     0     0     0 
+          dws     7    36     3     0     0     0 
+          wlk     1     0   139     0     0     0 
+          std     0     0     0   137     0     0 
+          sit     0     0     0     0   145     0 
+          jog     0     0     2     0     0    53 
+
+                  precision    recall  f1-score   support
+
+             dws      0.818     0.783     0.800        46
+             jog      1.000     0.964     0.981        55
+             sit      1.000     1.000     1.000       145
+             std      1.000     1.000     1.000       137
+             ups      0.864     0.810     0.836        63
+             wlk      0.939     0.993     0.965       140
+
+        accuracy                          0.957       586
+       macro avg      0.937     0.925     0.930       586
+    weighted avg      0.957     0.957     0.957       586
+
+
+    '''

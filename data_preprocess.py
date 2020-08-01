@@ -82,6 +82,35 @@ def read_all_subjects_activity_data_to_df(base_path: str) -> Tuple[pd.DataFrame,
 
 
 if __name__ == '__main__':
+    '''
+    This is a short script aimed to normalize the dataset for further processing. It does that by doing the following:
+    (1) Read all subjects data-files, for all sensors, and for all activities
+    (2) Align sensors data. 
+        Some sensors that have exactly the same number of samples. For example, ACC may have 1750 rows or data, while GYRO has 1783.
+        This is a normal and common occurrence in independent sensors. However, this made it a problem to aggregate the data to one frame.
+        To overcome this, I decided to throw out samples that don't exist in ALL THREE sensors. 
+        While not ideal, this usually threw out very little data (< 1 sec of data per sensors set).
+    (3) Created "epochs". An epoch is a sub-division of a specific recording to independent time-chunks, of ~10 seconds each.
+        The purpose of this was to allow us to effectively increase the data-set.
+        Since each epoch is non-overlapping, was can treat them as an additional, slightly varied, recording of the same subject, with the same label.
+        If the subject recorded 60 seconds of jogging, it is divided to 6 epochs, or 10 seconds each. Their label is the same - jogging.
+        * Creating epochs serves another purpose, which is a BUSINESS purpose:
+          Using epochs it is easy to determine in an almost continuous manner, the activity of a person.
+          This allows us to predict using arbitrary chunks of times. After predicting for each chunk, we
+          can apply higher-level logic to 'smooth-out' any inconsistencies. For example, if we get a prediction
+          of ['jog', 'jog', 'jog', 'jog', 'sit', 'jog', 'jog', 'jog'], it is highly probable that the 'sit' in 
+          the middle is a mis-classification, and we can then use that to improve the output of the model. 
+        
+    (4) Create basic features. The features were created for each epoch separately. Features consisted of:
+        (I) Average and STD for each of the raw-sensor columns
+        (II) Accelerometer and gyroscope magnitude: sqrt(x^2 + y^2 + z^2)
+        (III) Add important meta-data to the dataframe. This will later help us to divide data to train, cross-validation, and hold-out data.
+        
+    SUMMARY:
+    Read all subjects' data. 
+    Aligned data, and created 'epochs' to effectively increase dataset
+    '''
+
     path_data_basepath = r'data/'
     LOAD_FROM_PICKLE = False
     # reading and processing all subjects activities from all three sensors to a single df
@@ -112,5 +141,4 @@ if __name__ == '__main__':
     else:
         features_df = pickle.load(open(path_features_df, "rb"))
     print("Done\n")
-
 
