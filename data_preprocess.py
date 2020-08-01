@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from typing import List, Tuple
 from collections import OrderedDict
 import os
+import gc
+import itertools
 
 
 def read_sensor_data_by_subject(base_path: str, cur_activity: str, cur_sub: str) -> Tuple[pd.DataFrame, List[str], str]:
@@ -85,7 +87,7 @@ def read_all_subjects_activity_data_to_df(base_path: str) -> Tuple[pd.DataFrame,
     return all_subject_sensor_data, features_cols, label_col
 
 
-def add_session_epochs(df: pd.DataFrame, session_uid: pd.Series, sampling_rate_hz: int = 50, seconds_per_epoch: int = 10):
+def add_session_epochs(df: pd.DataFrame, session_uid_col: str, sampling_rate_hz: int = 50, seconds_per_epoch: int = 10):
     """
     :param df: input dataframe
     :param session_uid: session unique identifier to help locate samples belonging to the same
@@ -95,14 +97,45 @@ def add_session_epochs(df: pd.DataFrame, session_uid: pd.Series, sampling_rate_h
     By subdividing the session, we may increase the number of observations per each action.
     This will make it easier to 
     """
-    assert len(df) == len(session_uid), f"Dataframe and session must have the same length, but it isn't ({len(df)}, {len(session_uid)}). Cowardly aborting."
-    assert len(df.index.symmetric_difference(session_uid.index)) == 0, f"Dataframe and session must have identical indices. Cowardly aborting."
+    # assert len(df) == len(session_uid), f"Dataframe and session must have the same length, but it isn't ({len(df)}, {len(session_uid)}). Cowardly aborting."
+    # assert len(df.index.symmetric_difference(session_uid.index)) == 0, f"Dataframe and session must have identical indices. Cowardly aborting."
+    df['epoch'] = None
+    session_uids_list = list(set(df[session_uid_col].values))
+    # flatten = lambda l: [item for sublist in l for item in sublist]  # lamda expression to flatten list of lists
+
+
+
+    # for s_uid in session_uids_list:
+    s_uid = 'sub_16_dws_1'
+    n = (df[session_uid_col] == s_uid).sum()
+    seconds_total = n / sampling_rate_hz
+    n_epochs = int(seconds_total // seconds_per_epoch)
+    obs_per_epoch = seconds_per_epoch * sampling_rate_hz
+
+    epochs_vec_lists = [[i] * obs_per_epoch for i in range(0, n_epochs)]
+    if len(epochs_vec_lists) < n:
+        # epochs_vec_lists += ([n_epochs - 1] * (n - len(epochs_vec_lists)))
+        epochs_vec_lists[-1].extend(([n_epochs - 1] * (n - len(epochs_vec_lists))))
+        # epochs_vec += [n_epochs - 1] * (n - len(epochs_vec))
+        # epochs_vec.extend([n_epochs - 1] * (n - len(epochs_vec)))
+        # epochs_vec += [n_epochs - 1] * (n - len(epochs_vec))
+        # epochs_vec[-1].extend([n_epochs - 1] * (n - len(epochs_vec)))
+        # epochs_vec.append(np.ndarray([n_epochs - 1] * (n - len(epochs_vec))).ravel())
+        # np.append(epochs_vec, np.ndarray([n_epochs - 1] * (n - len(epochs_vec))).ravel())
+
+
+    # flatten(epochs_vec_lists)
+
+    epochs_vec = list(itertools.chain(*epochs_vec_lists))
+    df.loc[df[session_uid_col] == s_uid, 'epoch'] = np.array(epochs_vec)
+    len(epochs_vec)
+    # np.array(epochs_vec).ravel()
 
 
 
 
 if __name__ == '__main__':
-    # path_data_basepath = r'opora/data/'
+    gc.enable()
     path_data_basepath = r'data/'
     # sensors_paths_dict = OrderedDict({
     #     'A_DeviceMotion_data': 'motion',
@@ -120,6 +153,7 @@ if __name__ == '__main__':
 
     # reading and processing all subjects activities from all three sensors to a single df
     all_subject_sensor_data_df, features_cols, label_col = read_all_subjects_activity_data_to_df(path_data_basepath)
-
+    add_session_epochs(all_subject_sensor_data_df, 'session_uid')
+    # all_subject_sensor_data_df.to_csv('data/tmp.csv', index=False)
 
 
