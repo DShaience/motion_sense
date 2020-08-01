@@ -198,7 +198,7 @@ if __name__ == '__main__':
         raw_data_cols = pickle.load(open(path_subjects_sensor_raw_cols, "rb"))
         label_col = pickle.load(open(path_subjects_label_col, "rb"))
 
-    # print("")
+    # Generating some (very basic and generic features) over all raw data, in each epoch
     metadata_cols = [col for col in list(all_subject_sensor_data_df) if col not in raw_data_cols and col != label_col]
     if not LOAD_FROM_PICKLE:
         features_df = calculated_features_df(all_subject_sensor_data_df, raw_data_cols, label_col)
