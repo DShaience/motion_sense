@@ -2,3 +2,4 @@ data/
 .idea/
 venv/
 reading/
+__pycache__/
