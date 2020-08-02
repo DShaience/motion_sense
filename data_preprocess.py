@@ -102,17 +102,22 @@ if __name__ == '__main__':
           the middle is a mis-classification, and we can then use that to improve the output of the model. 
         
     (4) Create basic features. The features were created for each epoch separately. Features consisted of:
-        (I) Average and STD for each of the raw-sensor columns
+        (I) AVERAGE and STD for each of the raw-sensor columns (including magnitude, see II)
         (II) Accelerometer and gyroscope magnitude: sqrt(x^2 + y^2 + z^2)
         (III) Add important meta-data to the dataframe. This will later help us to divide data to train, cross-validation, and hold-out data.
         
     SUMMARY:
     Read all subjects' data. 
-    Aligned data, and created 'epochs' to effectively increase dataset
+    Aligned data, and created 'epochs' to effectively increase dataset. An epoch is a subdivision of each subject's session,
+    to 10-seconds chunks. Each chunk is labeled as the appropriate activity.
+    The basic idea was to increase the dataset on one side, but also making it possible for the model
+    to classify smaller time-chunks. This is more useful from a product POV, and enables us to 
+    make more granular decisions. It is also more practical, since it requires less data to reach a decision.
+    I felt that 10 seconds gives a good balance given that most of the sessions are rather short (< 60 sec).
     '''
 
     path_data_basepath = r'data/'
-    LOAD_FROM_PICKLE = False
+    # LOAD_FROM_PICKLE = False
     # reading and processing all subjects activities from all three sensors to a single df
     path_subjects_sensor_data = path_data_basepath + 'subjects_sensor_data.p'
     path_subjects_sensor_raw_cols = path_data_basepath + 'subjects_raw_cols.p'
@@ -120,25 +125,25 @@ if __name__ == '__main__':
     path_features_df = path_data_basepath + 'features_df.p'
 
     print("Loading all subjects and all sensors data")
-    if not LOAD_FROM_PICKLE:
-        all_subject_sensor_data_df, raw_data_cols, label_col = read_all_subjects_activity_data_to_df(path_data_basepath)
-        all_subject_sensor_data_df = add_session_epochs(all_subject_sensor_data_df, 'session_uid')
-        pickle.dump(all_subject_sensor_data_df, open(path_subjects_sensor_data, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
-        pickle.dump(raw_data_cols, open(path_subjects_sensor_raw_cols, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
-        pickle.dump(label_col, open(path_subjects_label_col, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
-    else:
-        all_subject_sensor_data_df = pickle.load(open(path_subjects_sensor_data, "rb"))
-        raw_data_cols = pickle.load(open(path_subjects_sensor_raw_cols, "rb"))
-        label_col = pickle.load(open(path_subjects_label_col, "rb"))
-    print("Done\n")
+    # if not LOAD_FROM_PICKLE:
+    all_subject_sensor_data_df, raw_data_cols, label_col = read_all_subjects_activity_data_to_df(path_data_basepath)
+    all_subject_sensor_data_df = add_session_epochs(all_subject_sensor_data_df, 'session_uid')
+    pickle.dump(all_subject_sensor_data_df, open(path_subjects_sensor_data, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump(raw_data_cols, open(path_subjects_sensor_raw_cols, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump(label_col, open(path_subjects_label_col, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
+    # else:
+    #     all_subject_sensor_data_df = pickle.load(open(path_subjects_sensor_data, "rb"))
+    #     raw_data_cols = pickle.load(open(path_subjects_sensor_raw_cols, "rb"))
+    #     label_col = pickle.load(open(path_subjects_label_col, "rb"))
+    # print("Done\n")
 
     # Generating some (very basic and generic features) over all raw data, in each epoch
     metadata_cols = [col for col in list(all_subject_sensor_data_df) if col not in raw_data_cols and col != label_col]
     print("Calculating features (this may take some time. Go grab a coffee. Read the news. Take a stroll outside!")
-    if not LOAD_FROM_PICKLE:
-        features_df = calculated_features_df(all_subject_sensor_data_df, raw_data_cols, label_col)
-        pickle.dump(features_df, open(path_features_df, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
-    else:
-        features_df = pickle.load(open(path_features_df, "rb"))
-    print("Done\n")
+    # if not LOAD_FROM_PICKLE:
+    features_df = calculated_features_df(all_subject_sensor_data_df, raw_data_cols, label_col)
+    pickle.dump(features_df, open(path_features_df, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
+    # else:
+    #     features_df = pickle.load(open(path_features_df, "rb"))
+    # print("Done\n")
 
