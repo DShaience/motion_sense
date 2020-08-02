@@ -192,6 +192,24 @@ if __name__ == '__main__':
     in part, due to inconsistent orientation of the phone worn by some subjects. 
     In such a case, upstairs and downstairs may indeed look similar, if the phone was, for example, transposed.
     Some of the features can be affected by this (especially separate-raw-axes data from accelerometer and gyroscope).   
+    
+    FUTURE WORK 
+    * Had there been more time I'd probably do more features, and more complex features. Right now all features are
+      very limited and unsophisticated. The model can probably be improved by them (even though the model already 
+      performs well).
+    * The ease with which these activities were classified (using very basic features) probably indicates that 
+      the data is 'too-easy'. Therefore, had it been possible, I'd get more variable data, from more subjects
+      to either validate this model, or improve it.
+    * Given longer recordings I would add a hidden-markov model to model which transitions between states can occur.
+      For example 'joggning' <-> 'sitting' is likely to be rare, but 'walkling' <-> 'jogging' is very probable.
+      This can give us an additional layer of decision making and understand subject's behavior.
+      Maybe even predict some of that behavior.
+      Also, get more recordings for generic ADLs. Currently we can select only 1 of 6 activities, but
+      what about 'other'. Anything that's non of these 6? A good model will need to have an additional
+      category for that as well, otherwise we risk more FPs (for example, 'sleeping' may be mis-classified as 'sitting',
+      just because the model has no 'other' category.
+    * TIME. I would like to get the actual date and day timestamps. This can further help predicting behavior.
+      Prediction, rather than detection, can have a big step is productizing the algorithm.   
     '''
 
     # Best GS model
