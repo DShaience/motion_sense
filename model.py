@@ -182,7 +182,7 @@ if __name__ == '__main__':
     the gs best estimator is good enough to leave it at that.
     
     Note about the results:
-    While both train and hold-out are characterized in high-recall/high-precision, it is both
+    While both train and hold-out are characterized by high-recall/high-precision, it is both
     interesting and encouraging to note that the *MIS-CLASSIFICATIONS MAKE SENSE*.
     The model may confuse 'upstairs' and 'downstairs'. These are indeed very similar actions.
     Also, 'walking' can be confused with either of the other dynamic activities (jogging, upstairs, downstairs), 
