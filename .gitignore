@@ -1,6 +1,6 @@
-data/
+data/*
 .idea/
 venv/
 reading/
 __pycache__/
-!data/sensors_data.rar
+!data/data_subjects_info.csv

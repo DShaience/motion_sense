@@ -111,7 +111,7 @@ if __name__ == '__main__':
     The dataset is quite small: there aren't many repetitions of each action activity. Between 2-3 per activity-type.
     In addition to that, there's a small number of users (24), which means that each activity has 48-72 samples, which is
     not a whole lot, when thinking this should be enough for train, test AND cross-validation of the model for SIX activities.
-    So, we expect that such dataset is going to be very prone to overfitting, under such conditions.
+    So, we expect that such dataset might be prone to overfitting, under such conditions.
     
     To address this issues, I selected the following strategies:
     (1) Divide each user to multiple ~10-seconds epochs. This increases the number of samples that can be used.
@@ -210,6 +210,12 @@ if __name__ == '__main__':
       just because the model has no 'other' category.
     * TIME. I would like to get the actual date and day timestamps. This can further help predicting behavior.
       Prediction, rather than detection, can have a big step is productizing the algorithm.   
+    * In this work I divided cross-validation data randomly, with no regard to subject identity.
+      This isn't ideal, espcially as subjects tend to have a consistent behavior. This means that
+      mixing the same subject (and sometimes even the same session) into both train and cv may 
+      create an overly optimistic model.
+      Ideally, I'd prefer to have more subjects, and divide train/cv per subject, to avoid any such
+      leakage of information 
     '''
 
     # Best GS model
