@@ -73,8 +73,9 @@ if __name__ == '__main__':
     # saving feature columns. These columns are the ones that will actually be used by the classifier
     features_cols = [col for col in list(features_df) if col not in [label_col, sue_col, 'sub', 'epoch']]
     feature_importance_df = feature_importance_estimate(features_df[features_cols], features_df[label_col])
-    top_important_features = feature_importance_df['Feature'].values[0:21]
+    top_important_features = feature_importance_df['Feature'].values[0:20]  # Top 20 most important features
     print(feature_importance_df.to_string())
+    features_to_user_cols = top_important_features
     '''
     ABOUT FEATURES-SET
     While we'll still use all features, it is interesting to not that the additional-data df (age, weight, gender, height)
@@ -148,12 +149,12 @@ if __name__ == '__main__':
     # Scaling and creating input for classifier
     scaler = StandardScaler()
     #   Train
-    X_train = df_train[features_cols]
+    X_train = df_train[features_to_user_cols]
     scaler.fit(X_train)
     X_train_scaled = scaler.transform(X_train)
     y_train = df_train[label_col].values
     #   Hold-out
-    X_holdout_scaled = scaler.transform(df_holdout[features_cols])
+    X_holdout_scaled = scaler.transform(df_holdout[features_to_user_cols])
     y_holdout = df_holdout[label_col].values
 
     # Monte-carlo cross-validation
@@ -269,55 +270,62 @@ if __name__ == '__main__':
     (B) Results (model predictions)
     -------------------------------------------------------------------------------------------
     This part includes some train/hold-out classification report and results.
+    Best estimator params:
+        Params: {'base_estimator__criterion': 'gini', 'base_estimator__max_depth': 4, 'base_estimator__min_samples_leaf': 10, 'base_estimator__splitter': 'best', 
+        'learning_rate': 0.1, 'n_estimators': 30, 'random_state': 90210}
+        Best Score: 0.9635605049173435
+    
+    GridSearch mean-test-score: 0.9635605049173435
+    GridSearch std-test-score: 0.008212684235527516
+    
     ========================================================
      Train Classification Report
     ========================================================
          t/p    ups   dws   wlk   std   sit   jog 
-          ups   199     0    14     0     0     0 
-          dws     0   176     4     0     0     0 
-          wlk     0     1   508     0     0     0 
-          std     0     0     0   451     4     0 
-          sit     0     0     0     0   508     0 
-          jog     0     0     2     0     0   184 
-
+          ups   213     4     0     0     0     0 
+          dws     0   176     0     0     0     0 
+          wlk     0     0   512     0     0     0 
+          std     0     0     0   478     0     0 
+          sit     0     0     0     0   530     0 
+          jog     0     0     0     0     0   196 
+    
                   precision    recall  f1-score   support
-
-             dws      0.994     0.978     0.986       180
-             jog      1.000     0.989     0.995       186
-             sit      0.992     1.000     0.996       508
-             std      1.000     0.991     0.996       455
-             ups      1.000     0.934     0.966       213
-             wlk      0.962     0.998     0.980       509
-
-        accuracy                          0.988      2051
-       macro avg      0.991     0.982     0.986      2051
-    weighted avg      0.988     0.988     0.988      2051
-
-
-
+    
+             dws      0.978     1.000     0.989       176
+             jog      1.000     1.000     1.000       196
+             sit      1.000     1.000     1.000       530
+             std      1.000     1.000     1.000       478
+             ups      1.000     0.982     0.991       217
+             wlk      1.000     1.000     1.000       512
+    
+        accuracy                          0.998      2109
+       macro avg      0.996     0.997     0.997      2109
+    weighted avg      0.998     0.998     0.998      2109
+    
+    
+    
     ========================================================
      Hold-out Classification Report
     ========================================================
          t/p    ups   dws   wlk   std   sit   jog 
-          ups    51     8     4     0     0     0 
-          dws     7    36     3     0     0     0 
-          wlk     1     0   139     0     0     0 
-          std     0     0     0   137     0     0 
-          sit     0     0     0     0   145     0 
-          jog     0     0     2     0     0    53 
-
+          ups    56     0     3     0     0     0 
+          dws     0    49     1     0     0     0 
+          wlk     0     0   137     0     0     0 
+          std     0     0     0   114     0     0 
+          sit     0     0     0     0   123     0 
+          jog     0     0     0     0     0    45 
+    
                   precision    recall  f1-score   support
-
-             dws      0.818     0.783     0.800        46
-             jog      1.000     0.964     0.981        55
-             sit      1.000     1.000     1.000       145
-             std      1.000     1.000     1.000       137
-             ups      0.864     0.810     0.836        63
-             wlk      0.939     0.993     0.965       140
-
-        accuracy                          0.957       586
-       macro avg      0.937     0.925     0.930       586
-    weighted avg      0.957     0.957     0.957       586
-
+    
+             dws      1.000     0.980     0.990        50
+             jog      1.000     1.000     1.000        45
+             sit      1.000     1.000     1.000       123
+             std      1.000     1.000     1.000       114
+             ups      1.000     0.949     0.974        59
+             wlk      0.972     1.000     0.986       137
+    
+        accuracy                          0.992       528
+       macro avg      0.995     0.988     0.992       528
+    weighted avg      0.993     0.992     0.992       528
 
     '''

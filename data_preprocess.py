@@ -128,22 +128,18 @@ if __name__ == '__main__':
     # if not LOAD_FROM_PICKLE:
     all_subject_sensor_data_df, raw_data_cols, label_col = read_all_subjects_activity_data_to_df(path_data_basepath)
     all_subject_sensor_data_df = add_session_epochs(all_subject_sensor_data_df, 'session_uid')
+    # These dumps aren't mandatory and exist only fo convenience
     pickle.dump(all_subject_sensor_data_df, open(path_subjects_sensor_data, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
     pickle.dump(raw_data_cols, open(path_subjects_sensor_raw_cols, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
     pickle.dump(label_col, open(path_subjects_label_col, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
-    # else:
-    #     all_subject_sensor_data_df = pickle.load(open(path_subjects_sensor_data, "rb"))
-    #     raw_data_cols = pickle.load(open(path_subjects_sensor_raw_cols, "rb"))
-    #     label_col = pickle.load(open(path_subjects_label_col, "rb"))
-    # print("Done\n")
 
     # Generating some (very basic and generic features) over all raw data, in each epoch
     metadata_cols = [col for col in list(all_subject_sensor_data_df) if col not in raw_data_cols and col != label_col]
     print("Calculating features (this may take some time. Go grab a coffee. Read the news. Take a stroll outside!")
-    # if not LOAD_FROM_PICKLE:
+
+    # Calculating features
     features_df = calculated_features_df(all_subject_sensor_data_df, raw_data_cols, label_col)
+    # This pickle contains the actual features dataframe, which is used by model.py
     pickle.dump(features_df, open(path_features_df, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
-    # else:
-    #     features_df = pickle.load(open(path_features_df, "rb"))
-    # print("Done\n")
+
 
