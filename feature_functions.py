@@ -86,7 +86,7 @@ def calculated_features_df(df: pd.DataFrame, raw_data_cols: List[str], label_col
     sue_list = list(df[sue_col].unique())
     features_dict_list = []
     for i, sue in enumerate(sue_list):
-        print(f"Creating features for: {sue} ({i}/{len(sue_list)})")
+        print(f"\rCreating features for: {sue} ({i}/{len(sue_list)})                            ", end="")
         cur_series = df.loc[df[sue_col] == sue, all_raw_data_cols]
         stds = cur_series.std()
         avgs = cur_series.mean()
@@ -95,7 +95,7 @@ def calculated_features_df(df: pd.DataFrame, raw_data_cols: List[str], label_col
         features_dict['sue'] = sue
         features_dict[label_col] = df.loc[df[sue_col] == sue, label_col].values[0]
         features_dict_list.append(features_dict)
-        print("\nDone")
+    print("\nDone")
 
     features_df_final = pd.DataFrame(features_dict_list)
     return features_df_final

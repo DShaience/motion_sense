@@ -25,7 +25,7 @@ def get_model_and_tuned_params(model_name: str):
     elif model_name.lower() == 'RandomForest'.lower():
         tuned_parameters = [{'n_estimators': [10, 15, 30],
                              'criterion': ['gini'],
-                             'max_depth': [3, 5, 6],
+                             'max_depth': [3, 4, 5, 6],
                              'min_samples_split': [10, 15],
                              'min_samples_leaf': [10, 15]
                              # 'class_weight': [{0: 1, 1: 2, 2: 3}]
@@ -37,8 +37,7 @@ def get_model_and_tuned_params(model_name: str):
                              "base_estimator__splitter": ["best"],
                              'base_estimator__max_depth': [2, 3, 4],
                              'base_estimator__min_samples_leaf': [10],
-                             "n_estimators": [10, 15, 30],
-                             # "n_estimators": [5],
+                             "n_estimators": [10, 15, 20, 30],
                              "random_state": [90210],
                              'learning_rate': [0.001, 0.01, 0.1]
                              }]
