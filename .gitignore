@@ -3,3 +3,4 @@ data/
 venv/
 reading/
 __pycache__/
+!data/sensors_data.rar
