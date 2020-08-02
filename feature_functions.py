@@ -39,9 +39,11 @@ def add_session_epochs(df: pd.DataFrame, session_uid_col: str, sampling_rate_hz:
     df['epoch'] = None
     session_uids_list = list(set(df[session_uid_col].values))
 
-    # Dividing each user's session to "sub-sessions" called epochs. Each epoch is seconds_per_epoch in length
-    # Since the dataset might not be divided to exactly in seconds_per_epoch, the leftover is appended to the last epoch
-    # which can be slightly larger than the result due to that
+    '''
+    Dividing each subject's session to "sub-sessions" called epochs. Each epoch is seconds_per_epoch in length
+    Since the dataset might not be divided to exactly in seconds_per_epoch, the leftover is appended to the last epoch
+    which can be slightly larger than the result due to that
+    '''
     for s_uid in session_uids_list:
         n = np.sum(df[session_uid_col] == s_uid)
         seconds_total = n / sampling_rate_hz
@@ -85,13 +87,11 @@ def calculated_features_df(df: pd.DataFrame, raw_data_cols: List[str], label_col
     features_dict_list = []
     for i, sue in enumerate(sue_list):
         print(f"Creating features for: {sue} ({i}/{len(sue_list)})")
-        features_dict = OrderedDict()
-        for raw_data_col in all_raw_data_cols:
-            print(f"\r\tStandard features for: {raw_data_col}                            ", end="")
-            cur_series = df.loc[df[sue_col] == sue, raw_data_col]
-            features_dict['std_' + raw_data_col] = np.std(cur_series.values)
-            features_dict['avg_' + raw_data_col] = np.average(cur_series.values)
+        cur_series = df.loc[df[sue_col] == sue, all_raw_data_cols]
+        stds = cur_series.std()
+        avgs = cur_series.mean()
 
+        features_dict = OrderedDict({**stds.add_prefix('std_').to_dict(), **avgs.add_prefix('avg_').to_dict()})
         features_dict['sue'] = sue
         features_dict[label_col] = df.loc[df[sue_col] == sue, label_col].values[0]
         features_dict_list.append(features_dict)
@@ -102,6 +102,11 @@ def calculated_features_df(df: pd.DataFrame, raw_data_cols: List[str], label_col
 
 
 def feature_importance_estimate(features: pd.DataFrame, y_true: pd.Series) -> pd.DataFrame:
+    """
+    :param features: features dataframe
+    :param y_true: target labels
+    :return: a dataframe (Features, Importance) of the feature importance estimate, using the ExtraTreesClassifier
+    """
     model = ExtraTreesClassifier(n_estimators=60, max_depth=5, n_jobs=-1, random_state=90210, verbose=1)
     model.fit(features.values, y_true.values.ravel())
     feature_importance_df = pd.DataFrame({'Feature': list(features), 'Importance': model.feature_importances_})
