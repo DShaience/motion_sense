@@ -4,3 +4,8 @@ venv/
 reading/
 __pycache__/
 !data/data_subjects_info.csv
+!data/data.zip
+!data/data.z01
+!data/data.z02
+!data/data.z03
+!data/data.z04
