@@ -2,6 +2,7 @@ import pickle
 import pandas as pd
 from typing import List, Tuple
 from feature_functions import add_session_epochs, calculated_features_df
+from pyunpack import Archive
 
 
 def read_sensor_data_by_subject(base_path: str, cur_activity: str, cur_sub: str) -> Tuple[pd.DataFrame, List[str], str]:
@@ -117,6 +118,12 @@ if __name__ == '__main__':
     '''
 
     path_data_basepath = r'data/'
+
+    print("Extracting datafiles from rar")
+    rar_path = r'data/data.part01.rar'
+    Archive(rar_path).extractall(path_data_basepath)
+    print("Done")
+
     # LOAD_FROM_PICKLE = False
     # reading and processing all subjects activities from all three sensors to a single df
     path_subjects_sensor_data = path_data_basepath + 'subjects_sensor_data.p'
